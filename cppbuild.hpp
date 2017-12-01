@@ -249,20 +249,8 @@ namespace cppbuild
             auto fileName = extractFilename(file);
             auto filePath = extractFilepath(file);
             
-            std::cout << "if not exist " << pathCombine({ "build", "obj", file + ".o" }) << " (" << std::endl;
-            std::cout << "    echo Compiling \"" << file << "\"" << std::endl 
-                      << "    g++" << this->_compilerFlags << " " << file << " -c -o " << pathCombine({ "build", "obj", file + ".o" }) << this->outputIncludeDirs() << std::endl;
-            std::cout << ")" << std::endl;
-
-            std::cout << "for /f \"delims=\" %%i in ('\"forfiles /p " << pathCombine({ "build", "obj" }) << " /m " << fileName << ".o /c \"cmd /c echo @fdate@ftime\" \"') do set ofile=%%i" << std::endl;
-            std::cout << "for /f \"delims=\" %%i in ('\"forfiles";
-            if (filePath.size() > 0) std::cout << " /p " << filePath;
-            std::cout << " /m " << fileName << " /c \"cmd /c echo @fdate@ftime\" \"') do set cfile=%%i" << std::endl;
-
-            std::cout << "if \"%ofile:~6,4%%ofile:~3,2%%ofile:~0,2%%ofile:~11,2%%ofile:~14,2%%ofile:~16,2%%ofile:~19,2%%ofile:~22,2%\" LEQ \"%cfile:~6,4%%cfile:~3,2%%cfile:~0,2%%cfile:~11,2%%cfile:~14,2%%cfile:~16,2%%cfile:~19,2%%cfile:~22,2%\" (" << std::endl;
-            std::cout << "    echo Compiling \"" << file << "\"" << std::endl 
-                      << "    g++" << this->_compilerFlags << " " << file << " -c -o " << pathCombine({ "build", "obj", file + ".o" }) << this->outputIncludeDirs() << std::endl;
-            std::cout << ")" << std::endl;
+            std::cout << "echo Compiling \"" << file << "\"" << std::endl 
+                      << "g++" << this->_compilerFlags << " " << file << " -c -o " << pathCombine({ "build", "obj", file + ".o" }) << this->outputIncludeDirs() << std::endl;
         }
 
         Target& generateBuildScript()
