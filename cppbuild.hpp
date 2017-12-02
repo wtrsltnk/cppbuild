@@ -69,6 +69,12 @@ namespace cppbuild
         std::string _folder;
         std::map<std::string, Folder> _folders;
         std::vector<std::string> _files;
+    protected:
+        virtual const std::string buildRoot() const
+        {
+            return "build";
+        }
+
     public:
         Folder(const std::string& folder)
             : _folder(folder)
@@ -154,9 +160,9 @@ namespace cppbuild
             // create all folders needed to compile to
             for (auto folder : allFolders(path))
             {
-                std::cout << "echo Creating folder \"" << pathCombine({ "build", "obj", folder }) << "\"\n" 
-                          << "if not exist " << pathCombine({ "build", "obj", folder }) << "("
-                          << "    mkdir " << pathCombine({ "build", "obj", folder }) << "\n"
+                std::cout << "echo Creating folder \"" << pathCombine({ buildRoot(), "obj", folder }) << "\"\n" 
+                          << "if not exist " << pathCombine({ buildRoot(), "obj", folder }) << "("
+                          << "    mkdir " << pathCombine({ buildRoot(), "obj", folder }) << "\n"
                           << ")\n";
             }
         }
@@ -184,11 +190,11 @@ namespace cppbuild
 
         std::string outputFile() const
         {
-            if (_targetType == TargetTypes::Executable) return pathCombine({ "build", _project + ".exe" });
-            if (_targetType == TargetTypes::SharedLibrary) return pathCombine({ "build", "lib" + _project + ".dll" });
-            if (_targetType == TargetTypes::StaticLibrary) return pathCombine({ "build", "lib" + _project + ".a" });
+            if (_targetType == TargetTypes::Executable) return pathCombine({ buildRoot(), _project + ".exe" });
+            if (_targetType == TargetTypes::SharedLibrary) return pathCombine({ buildRoot(), "lib" + _project + ".dll" });
+            if (_targetType == TargetTypes::StaticLibrary) return pathCombine({ buildRoot(), "lib" + _project + ".a" });
 
-            return pathCombine({ "build", _project });
+            return pathCombine({ buildRoot() });
         }
 
         std::string outputLibraries() const
@@ -226,7 +232,7 @@ namespace cppbuild
             std::string objectFiles;
 
             // Add all object files
-            for (auto file : allFiles()) objectFiles += std::string(" ") + pathCombine({ "build", "obj", file + ".o" });
+            for (auto file : allFiles()) objectFiles += std::string(" ") + pathCombine({ buildRoot(), "obj", file + ".o" });
 
             return objectFiles;
         }
@@ -245,11 +251,8 @@ namespace cppbuild
 
         void outputCompileFile(const std::string& file, int percentage)
         {
-            auto fileName = extractFilename(file);
-            auto filePath = extractFilepath(file);
-            
             std::cout << "echo [" << std::setfill(' ') << std::setw(3) << percentage << "%%] Compiling \"" << file << "\"\n" 
-                      << "g++" << _compilerFlags << " " << file << " -c -o " << pathCombine({ "build", "obj", file + ".o" }) << outputIncludeDirs() << "\n";
+                      << "g++" << _compilerFlags << " " << file << " -c -o " << pathCombine({ buildRoot(), "obj", file + ".o" }) << outputIncludeDirs() << "\n";
         }
 
         void generateBuildScript()
@@ -319,7 +322,7 @@ namespace cppbuild
         void generateCleanScript()
         {
             // Remove all the independant object files
-            for (auto file : allFiles()) outputDeleteFile(pathCombine({ "build", "obj", extractFilename(file) + ".o" }));
+            for (auto file : allFiles()) outputDeleteFile(pathCombine({ buildRoot(), "obj", extractFilename(file) + ".o" }));
 
             // Remove the target file
             outputDeleteFile(outputFile());
@@ -334,11 +337,11 @@ namespace cppbuild
         virtual ~Target()
         {
             std::cout << "echo off"<< "\n";
-            std::cout << "if \"%1\" == \"\" goto buildtarget\n";
-            std::cout << "if \"%1\" == \"" << _project << "\" goto buildtarget\n";
+            std::cout << "if \"%1\" == \"\" goto build" << _project << "\n";
+            std::cout << "if \"%1\" == \"" << _project << "\" goto build" << _project << "\n";
             std::cout << "echo Skipping target \"" << _project << "\".\n";
-            std::cout << "goto done\n";
-            std::cout << ":buildtarget\n";
+            std::cout << "goto done" << _project << "\n";
+            std::cout << ":build" << _project << "\n";
             if (buildScriptOn)
             {
                 std::cout << "echo Executing build script for target \"" << _project << "\"\n";
@@ -359,7 +362,7 @@ namespace cppbuild
                 std::cout << "echo Executing clean script for target \"" << _project << "\"\n";
                 generateCleanScript();
             }
-            std::cout << ":done\n";
+            std::cout << ":done" << _project << "\n";
             std::cout << "echo.\n";
         }
 
