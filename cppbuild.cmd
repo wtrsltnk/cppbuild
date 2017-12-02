@@ -39,31 +39,40 @@ echo.
 
 if "%1"=="" (
 	echo Start building this project...
+    echo.
 	call build\build.cmd
 	echo done.
 	echo.
 )
 if "%1"=="build" (
 	echo Start building this project...
-	call build\build.cmd
+    echo.
+	call build\build.cmd %2
 	echo done.
 	echo.
 )
 if "%1"=="install" (
 	echo Start installing this project...
-	call build\install.cmd
+    echo.
+	call build\install.cmd %2
 	echo done.
 	echo.
 )
 if "%1"=="run" (
-	echo Start running this project...
-	call build\run.cmd
-	echo done.
-	echo.
+    if "%2"=="" (
+        echo No target given to run this project.
+    ) else (
+        echo Start running this project...
+        echo.
+        call build\run.cmd %2
+        echo done.
+        echo.
+    )
 )
 if "%1"=="clean" (
 	echo Start cleaning this project...
-	call build\clean.cmd
+    echo.
+    call build\clean.cmd %2
 	echo done.
 	echo.
 )

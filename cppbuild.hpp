@@ -5,6 +5,7 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
+#include <iomanip>
 
 #define PATH_SEPERATOR_CHR '\\'
 #define PATH_SEPERATOR_STR "\\"
@@ -17,19 +18,17 @@ namespace cppbuild
     bool installScriptOn = false;
     bool runScriptOn = false;
     bool cleanScriptOn = false;
+    std::string targetToUse;
 
     void init(int argc, char* argv[])
     {
         if (argc == 1) cppbuild::buildScriptOn = true;
 
-        for (int i = 0; i < argc; i++)
-        {
-            if (std::string(argv[i]) == "build") cppbuild::buildScriptOn = true;
-            if (std::string(argv[i]) == "install") cppbuild::installScriptOn = true;
-            if (std::string(argv[i]) == "run") cppbuild::runScriptOn = true;
-            if (std::string(argv[i]) == "clean") cppbuild::cleanScriptOn = true;
-        }
-    } 
+        if (std::string(argv[1]) == "build") cppbuild::buildScriptOn = true;
+        if (std::string(argv[1]) == "install") cppbuild::installScriptOn = true;
+        if (std::string(argv[1]) == "run") cppbuild::runScriptOn = true;
+        if (std::string(argv[1]) == "clean") cppbuild::cleanScriptOn = true;
+    }
 
     std::string pathCombine(std::initializer_list<const std::string> files)
     {
@@ -74,19 +73,19 @@ namespace cppbuild
         Folder(const std::string& folder)
             : _folder(folder)
         {
-            cleanPathSeperators(this->_folder);
+            cleanPathSeperators(_folder);
 
-            auto split = this->_folder.find(PATH_SEPERATOR_CHR);
+            auto split = _folder.find(PATH_SEPERATOR_CHR);
             if (split != std::string::npos)
             {
-                auto rest = this->_folder.substr(split + 1);
-                this->_folders.insert(std::make_pair(rest, Folder(rest)));
-                this->_folder = this->_folder.substr(0, split);
+                auto rest = _folder.substr(split + 1);
+                _folders.insert(std::make_pair(rest, Folder(rest)));
+                _folder = _folder.substr(0, split);
             }
         }
 
-        const std::map<std::string, Folder>& folders() const { return this->_folders; }
-        const std::vector<std::string>& files() const { return this->_files; }
+        const std::map<std::string, Folder>& folders() const { return _folders; }
+        const std::vector<std::string>& files() const { return _files; }
 
         Folder& files(std::initializer_list<const char*> files)
         {
@@ -112,7 +111,7 @@ namespace cppbuild
         // TODO test this in combo with folders, not sure it works
         Folder& operator += (const Folder& other)
         {
-            for (auto file : other._files) this->_files.push_back(file);
+            for (auto file : other._files) _files.push_back(file);
             for (auto folder : other._folders)
             {
                 auto result = _folders.insert(std::make_pair(folder.first, folder.second));
@@ -153,12 +152,12 @@ namespace cppbuild
         void createAllFolders(const std::string& path = "")
         {
             // create all folders needed to compile to
-            for (auto folder : this->allFolders(path))
+            for (auto folder : allFolders(path))
             {
-                std::cout << "echo Creating folder \"" << pathCombine({ "build", "obj", folder }) << "\"" << std::endl 
+                std::cout << "echo Creating folder \"" << pathCombine({ "build", "obj", folder }) << "\"\n" 
                           << "if not exist " << pathCombine({ "build", "obj", folder }) << "("
-                          << "    mkdir " << pathCombine({ "build", "obj", folder }) << std::endl
-                          << ")" << std::endl;
+                          << "    mkdir " << pathCombine({ "build", "obj", folder }) << "\n"
+                          << ")\n";
             }
         }
     };
@@ -185,11 +184,11 @@ namespace cppbuild
 
         std::string outputFile() const
         {
-            if (this->_targetType == TargetTypes::Executable) return pathCombine({ "build", this->_project + ".exe" });
-            if (this->_targetType == TargetTypes::SharedLibrary) return pathCombine({ "build", "lib" + this->_project + ".dll" });
-            if (this->_targetType == TargetTypes::StaticLibrary) return pathCombine({ "build", "lib" + this->_project + ".a" });
+            if (_targetType == TargetTypes::Executable) return pathCombine({ "build", _project + ".exe" });
+            if (_targetType == TargetTypes::SharedLibrary) return pathCombine({ "build", "lib" + _project + ".dll" });
+            if (_targetType == TargetTypes::StaticLibrary) return pathCombine({ "build", "lib" + _project + ".a" });
 
-            return pathCombine({ "build", this->_project });
+            return pathCombine({ "build", _project });
         }
 
         std::string outputLibraries() const
@@ -197,7 +196,7 @@ namespace cppbuild
             std::string libraries;
 
             // Gather all library include directories into one string
-            for (auto file : this->_libraries) libraries += " -l" + file;
+            for (auto file : _libraries) libraries += " -l" + file;
             
             return libraries;
         }
@@ -207,7 +206,7 @@ namespace cppbuild
             std::string dirs;
 
             // Gather all library include directories into one string
-            for (auto dir : this->_libraryDirs) dirs += " -L" + dir;
+            for (auto dir : _libraryDirs) dirs += " -L" + dir;
             
             return dirs;
         }
@@ -217,7 +216,7 @@ namespace cppbuild
             std::string dirs;
 
             // Gather all header include directories into one string
-            for (auto dir : this->_includeDirs) dirs += " -I" + dir;
+            for (auto dir : _includeDirs) dirs += " -I" + dir;
             
             return dirs;
         }
@@ -227,67 +226,66 @@ namespace cppbuild
             std::string objectFiles;
 
             // Add all object files
-            for (auto file : this->allFiles()) objectFiles += std::string(" ") + pathCombine({ "build", "obj", file + ".o" });
+            for (auto file : allFiles()) objectFiles += std::string(" ") + pathCombine({ "build", "obj", file + ".o" });
 
             return objectFiles;
         }
 
         void outputCopyFile(const std::string& outputFile, const std::string& destinationPath)
         {
-            std::cout << "echo Copying \"" << outputFile << "\"" << std::endl ;
-            std::cout << "copy " << outputFile << " " << pathCombine({ destinationPath, extractFilename(outputFile) }) << std::endl;
+            std::cout << "echo Copying \"" << outputFile << "\"\n" ;
+            std::cout << "copy " << outputFile << " " << pathCombine({ destinationPath, extractFilename(outputFile) }) << "\n";
         }
 
         void outputDeleteFile(const std::string& filename)
         {
-            std::cout << "echo Removing \"" << filename << "\"" << std::endl ;
-            std::cout << "del " << filename << std::endl;
+            std::cout << "echo Removing \"" << filename << "\"\n" ;
+            std::cout << "del " << filename << "\n";
         }
 
-        void outputCompileFile(const std::string& file)
+        void outputCompileFile(const std::string& file, int percentage)
         {
             auto fileName = extractFilename(file);
             auto filePath = extractFilepath(file);
             
-            std::cout << "echo Compiling \"" << file << "\"" << std::endl 
-                      << "g++" << this->_compilerFlags << " " << file << " -c -o " << pathCombine({ "build", "obj", file + ".o" }) << this->outputIncludeDirs() << std::endl;
+            std::cout << "echo [" << std::setfill(' ') << std::setw(3) << percentage << "%%] Compiling \"" << file << "\"\n" 
+                      << "g++" << _compilerFlags << " " << file << " -c -o " << pathCombine({ "build", "obj", file + ".o" }) << outputIncludeDirs() << "\n";
         }
 
-        Target& generateBuildScript()
+        void generateBuildScript()
         {
-            auto outputFile = this->outputFile();
-
-            this->createAllFolders();
+            createAllFolders();
 
             // Compile all given files into their own object file
-            for (auto file : this->allFiles()) this->outputCompileFile(file);
-            
+            for (int i = 0; i < allFiles().size(); i++)
+            {
+                outputCompileFile(allFiles()[i], int((double(i + 1) / double(allFiles().size() + 1)) * 100));
+            }
+
             if (_targetType == TargetTypes::Executable)
             {
-                std::cout << "echo Linking executable \"" << outputFile << "\"" << std::endl 
-                          << "g++" << this->_linkerFlags << " -o " << outputFile << this->outputAllObjectFiles() << this->outputLibraryDirs() << this->outputLibraries() << std::endl;
+                std::cout << "echo [" << std::setfill(' ') << std::setw(3) << 100 << "%%] Linking executable \"" << outputFile() << "\"\n" 
+                          << "g++" << _linkerFlags << " -o " << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
             }
             else if (_targetType == TargetTypes::SharedLibrary)
             {
-                std::cout << "echo Linking shared library \"" << outputFile << "\"" << std::endl
-                          << "g++" << this->_linkerFlags << " -shared -o " << outputFile << this->outputAllObjectFiles() << this->outputLibraryDirs() << this->outputLibraries() << std::endl;
+                std::cout << "echo Linking shared library \"" << outputFile() << "\"\n"
+                          << "g++" << _linkerFlags << " -shared -o " << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
             }
             else if (_targetType == TargetTypes::StaticLibrary)
             {
-                std::cout << "echo Linking static library \"" << outputFile << "\"" << std::endl
-                          << "ar rvs " << outputFile << this->outputAllObjectFiles() << std::endl;
+                std::cout << "echo Linking static library \"" << outputFile() << "\"\n"
+                          << "ar rvs " << outputFile() << outputAllObjectFiles() << "\n";
             }
         }
 
         void generateInstallScript()
         {
-            auto outputFile = this->outputFile();
-            
             // Determine target destination and create all folders needed for that
-            auto fullTargetDestination = pathCombine({ _installDir, this->_targetInstallDir });
+            auto fullTargetDestination = pathCombine({ _installDir, _targetInstallDir });
 
             // Copy the target file(exe/a/dll) to the install folder
-           this->outputCopyFile(outputFile, fullTargetDestination); 
+           outputCopyFile(outputFile(), fullTargetDestination); 
             
             // For all destinations, copy the install files
             for (auto pair : _installFiles)
@@ -299,32 +297,32 @@ namespace cppbuild
                 auto files = pair.second.allFiles();
                 for (auto file : files)
                 {
-                    this->outputCopyFile(file, fullDestination); 
+                    outputCopyFile(file, fullDestination); 
                 }
             }
         }
 
         void generateRunScript()
         {
-            if (this->_targetType == TargetTypes::Executable)
+            if (_targetType == TargetTypes::Executable)
             {
                 // Run the executable
-                std::cout << "call " << this->outputFile() << std::endl;
+                std::cout << "call " << outputFile() << "\n";
             }
             else
             {
                 // Show a message that the user is trying to run the target executable
-                std::cout << "echo This target is not an executable." << std::endl; 
+                std::cout << "echo This target is not an executable.\n"; 
             }
         }
 
         void generateCleanScript()
         {
             // Remove all the independant object files
-            for (auto file : this->allFiles()) this->outputDeleteFile(pathCombine({ "build", "obj", extractFilename(file) + ".o" }));
+            for (auto file : allFiles()) outputDeleteFile(pathCombine({ "build", "obj", extractFilename(file) + ".o" }));
 
             // Remove the target file
-            this->outputDeleteFile(this->outputFile());
+            outputDeleteFile(outputFile());
         }
 
     public:
@@ -335,54 +333,61 @@ namespace cppbuild
 
         virtual ~Target()
         {
-            std::cout << "echo off"<< std::endl;
+            std::cout << "echo off"<< "\n";
+            std::cout << "if \"%1\" == \"\" goto buildtarget\n";
+            std::cout << "if \"%1\" == \"" << _project << "\" goto buildtarget\n";
+            std::cout << "echo Skipping target \"" << _project << "\".\n";
+            std::cout << "goto done\n";
+            std::cout << ":buildtarget\n";
             if (buildScriptOn)
             {
-                std::cout << "echo." << std::endl << "echo Executing build script for target \"" << this->_project << "\"" << std::endl;
+                std::cout << "echo Executing build script for target \"" << _project << "\"\n";
                 generateBuildScript();
             }
             if (installScriptOn)
             {
-                std::cout << "echo." << std::endl << "echo Executing install script for target \"" << this->_project << "\"" << std::endl;
+                std::cout << "echo Executing install script for target \"" << _project << "\"\n";
                 generateInstallScript();
             }
             if (runScriptOn)
             {
-                std::cout << "echo." << std::endl << "echo Executing run script for target \"" << this->_project << "\"" << std::endl;
+                std::cout << "echo Executing run script for target \"" << _project << "\"\n";
                 generateRunScript();
             }
             if (cleanScriptOn)
             {
-                std::cout << "echo." << std::endl << "echo Executing clean script for target \"" << this->_project << "\"" << std::endl;
+                std::cout << "echo Executing clean script for target \"" << _project << "\"\n";
                 generateCleanScript();
             }
+            std::cout << ":done\n";
+            std::cout << "echo.\n";
         }
 
         Target& includeDirs(std::initializer_list<const char*> dirs)
         {
-            for (auto dir : dirs) this->_includeDirs.push_back(dir);
+            for (auto dir : dirs) _includeDirs.push_back(dir);
 
             return *this;
         }
 
         Target& libraries(std::initializer_list<const char*> files)
         {
-            for (auto file : files) this->_libraries.push_back(file);
+            for (auto file : files) _libraries.push_back(file);
 
             return *this;
         }
 
         Target& libraryDirs(std::initializer_list<const char*> dirs)
         {
-            for (auto dir : dirs) this->_libraryDirs.push_back(dir);
+            for (auto dir : dirs) _libraryDirs.push_back(dir);
 
             return *this;
         }
 
         Target& installDir(const std::string& folder)
         {
-            this->_installDir = folder;
-            cleanPathSeperators(this->_installDir);
+            _installDir = folder;
+            cleanPathSeperators(_installDir);
 
             return *this;
         }
@@ -394,8 +399,8 @@ namespace cppbuild
 
         Target& installTargetInto(const std::string& target)
         {
-            this->_targetInstallDir = target;
-            cleanPathSeperators(this->_targetInstallDir);
+            _targetInstallDir = target;
+            cleanPathSeperators(_targetInstallDir);
 
             return *this;
         }
@@ -405,7 +410,7 @@ namespace cppbuild
             auto dest = destination;
             cleanPathSeperators(dest);
 
-            auto result = this->_installFiles.insert(std::make_pair(dest, folder));
+            auto result = _installFiles.insert(std::make_pair(dest, folder));
 
             if (!result.second) result.first->second += folder;
 
@@ -414,14 +419,14 @@ namespace cppbuild
 
         Target& compilerFlags(std::initializer_list<const char*> flags)
         {
-            for (auto flag : flags) this->_compilerFlags += std::string(" ") + flag;
+            for (auto flag : flags) _compilerFlags += std::string(" ") + flag;
 
             return *this;
         }
 
         Target& linkerFlags(std::initializer_list<const char*> flags)
         {
-            for (auto flag : flags) this->_linkerFlags += std::string(" ") + flag;
+            for (auto flag : flags) _linkerFlags += std::string(" ") + flag;
 
             return *this;
         }
