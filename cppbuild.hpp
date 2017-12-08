@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
+#include <regex>
 
 #define PATH_SEPERATOR_CHR '\\'
 #define PATH_SEPERATOR_STR "\\"
@@ -155,15 +156,20 @@ namespace cppbuild
             return result;
         }
 
+        void createFolder(const std::string& path)
+        {
+            std::cout << "if not exist " << path << " ("
+                      << "    echo Creating folder \"" << path << "\"\n" 
+                      << "    mkdir " << path << "\n"
+                      << ")\n";
+        }
+
         void createAllFolders(const std::string& path = "")
         {
             // create all folders needed to compile to
             for (auto folder : allFolders(path))
             {
-                std::cout << "echo Creating folder \"" << pathCombine({ buildRoot(), "obj", folder }) << "\"\n" 
-                          << "if not exist " << pathCombine({ buildRoot(), "obj", folder }) << "("
-                          << "    mkdir " << pathCombine({ buildRoot(), "obj", folder }) << "\n"
-                          << ")\n";
+                createFolder(pathCombine({ buildRoot(), "obj", folder }));
             }
         }
     };
@@ -232,7 +238,13 @@ namespace cppbuild
             std::string objectFiles;
 
             // Add all object files
-            for (auto file : allFiles()) objectFiles += std::string(" ") + pathCombine({ buildRoot(), "obj", file + ".o" });
+            for (auto file : allFiles())
+            {
+                std::string objfile = pathCombine({ buildRoot(), "obj", file + ".o" });
+                objfile = std::regex_replace(objfile, std::regex("\\.\\."), "__");
+
+                objectFiles += std::string(" ") + objfile;
+            }
 
             return objectFiles;
         }
@@ -251,13 +263,32 @@ namespace cppbuild
 
         void outputCompileFile(const std::string& file, int percentage)
         {
+            std::string objfile = pathCombine({ buildRoot(), "obj", file + ".o" });
+            objfile = std::regex_replace(objfile, std::regex("\\.\\."), "__");
+
             std::cout << "echo [" << std::setfill(' ') << std::setw(3) << percentage << "%%] Compiling \"" << file << "\"\n" 
-                      << "g++" << _compilerFlags << " " << file << " -c -o " << pathCombine({ buildRoot(), "obj", file + ".o" }) << outputIncludeDirs() << "\n";
+                      << "g++" << _compilerFlags << " " << file << " -c -o " << objfile << outputIncludeDirs() << "\n";
         }
 
         void generateBuildScript()
         {
-            createAllFolders();
+            // Gather all folders that need to be created
+            std::set<std::string> foldersToCreate;
+            for (auto folder : allFolders())
+            {
+                foldersToCreate.insert(pathCombine({ buildRoot(), "obj", folder }));
+            }
+
+            for (auto file : allFiles())
+            {
+                std::string objfile = extractFilepath(pathCombine({ buildRoot(), "obj", file }));
+                foldersToCreate.insert(std::regex_replace(objfile, std::regex("\\.\\."), "__"));
+            }
+
+            for (auto folder : foldersToCreate)
+            {
+                createFolder(folder);
+            }
 
             // Compile all given files into their own object file
             for (int i = 0; i < allFiles().size(); i++)
