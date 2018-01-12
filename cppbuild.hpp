@@ -23,12 +23,17 @@ namespace cppbuild
 
     void init(int argc, char* argv[])
     {
-        if (argc == 1) cppbuild::buildScriptOn = true;
-
-        if (std::string(argv[1]) == "build") cppbuild::buildScriptOn = true;
-        if (std::string(argv[1]) == "install") cppbuild::installScriptOn = true;
-        if (std::string(argv[1]) == "run") cppbuild::runScriptOn = true;
-        if (std::string(argv[1]) == "clean") cppbuild::cleanScriptOn = true;
+        if (argc == 1)
+        {
+            cppbuild::buildScriptOn = true;
+        }
+        else if (argc > 1)
+        {
+            if (std::string(argv[1]) == "build") cppbuild::buildScriptOn = true;
+            if (std::string(argv[1]) == "install") cppbuild::installScriptOn = true;
+            if (std::string(argv[1]) == "run") cppbuild::runScriptOn = true;
+            if (std::string(argv[1]) == "clean") cppbuild::cleanScriptOn = true;
+        }
     }
 
     std::string pathCombine(std::initializer_list<const std::string> files)
