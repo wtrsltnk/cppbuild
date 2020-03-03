@@ -33,9 +33,9 @@ This will create one target with the name ``program`` that will compile and link
 The following methods can be used on the cppbuild::Target class:
 
 * ``files`` - Adds files to compile
-* ``includeDirs`` - Adds directories with the -I parameter
-* ``libraries`` - Adds libraries with the -l parameter
-* ``libraryDirs`` - Adds directories with the -L parameter
+* ``includeDirs`` - Adds directories with the ``-I`` parameter
+* ``libraries`` - Adds libraries with the ``-l`` parameter
+* ``libraryDirs`` - Adds directories with the ``-L`` parameter
 * ``compilerFlags`` - Adds compiler flags
 * ``linkerFlags`` - Adds linker flags
 * ``installDir`` - Adds directory to install build artifacts into
