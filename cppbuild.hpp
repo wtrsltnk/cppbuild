@@ -19,6 +19,7 @@ namespace cppbuild
     bool installScriptOn = false;
     bool runScriptOn = false;
     bool cleanScriptOn = false;
+    bool testScriptOn = false;
     std::string targetToUse;
 
     void init(int argc, char* argv[])
@@ -33,6 +34,7 @@ namespace cppbuild
             if (std::string(argv[1]) == "install") cppbuild::installScriptOn = true;
             if (std::string(argv[1]) == "run") cppbuild::runScriptOn = true;
             if (std::string(argv[1]) == "clean") cppbuild::cleanScriptOn = true;
+            if (std::string(argv[1]) == "test") cppbuild::testScriptOn = true;
         }
     }
 
@@ -363,6 +365,10 @@ namespace cppbuild
             // Remove the target file
             outputDeleteFile(outputFile());
         }
+        
+        void generateTestScript()
+        {
+        }
 
     public:
         Target(const std::string& name, TargetTypes targetType = TargetTypes::Executable)
@@ -397,6 +403,11 @@ namespace cppbuild
             {
                 std::cout << "echo Executing clean script for target \"" << _project << "\"\n";
                 generateCleanScript();
+            }
+            if (testScriptOn)
+            {
+                std::cout << "echo Executing test script for target \"" << _project << "\"\n";
+                generateTestScript();
             }
             std::cout << ":done" << _project << "\n";
             std::cout << "echo.\n";

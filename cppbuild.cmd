@@ -33,30 +33,31 @@ call build\cppbuild.exe build > build\build.cmd
 call build\cppbuild.exe install > build\install.cmd
 call build\cppbuild.exe run > build\run.cmd
 call build\cppbuild.exe clean > build\clean.cmd
+call build\cppbuild.exe test > build\test.cmd
 
 echo done.
 echo.
 
 if "%1"=="" (
-	echo Start building this project...
+    echo Start building this project...
     echo.
-	call build\build.cmd
-	echo done.
-	echo.
+    call build\build.cmd
+    echo done.
+    echo.
 )
 if "%1"=="build" (
-	echo Start building this project...
+    echo Start building this project...
     echo.
-	call build\build.cmd %2
-	echo done.
-	echo.
+    call build\build.cmd %2
+    echo done.
+    echo.
 )
 if "%1"=="install" (
-	echo Start installing this project...
+    echo Start installing this project...
     echo.
-	call build\install.cmd %2
-	echo done.
-	echo.
+    call build\install.cmd %2
+    echo done.
+    echo.
 )
 if "%1"=="run" (
     if "%2"=="" (
@@ -70,11 +71,18 @@ if "%1"=="run" (
     )
 )
 if "%1"=="clean" (
-	echo Start cleaning this project...
+    echo Start cleaning this project...
     echo.
     call build\clean.cmd %2
-	echo done.
-	echo.
+    echo done.
+    echo.
+)
+if "%1"=="test" (
+    echo Start testing this project...
+    echo.
+    call build\test.cmd %2
+    echo done.
+    echo.
 )
 
 :exit
