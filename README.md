@@ -49,5 +49,6 @@ The following parameters can be passed to the ``cppbuild`` command:
 
 * ``clean`` - Cleans all build files
 * ``build`` - Builds all project targets
+* ``test`` - Runs all project tests
 * ``run`` - Runs project target
 * ``install`` - Installs the project
