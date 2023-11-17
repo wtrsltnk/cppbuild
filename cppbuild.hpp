@@ -370,7 +370,7 @@ namespace cppbuild
             {
                 std::cout << "echo [" << std::setfill(' ') << std::setw(3) << 100 << "%%] Linking executable \"" << outputFile() << "\"\n" 
 #ifdef _MSC_VER
-                          << "cl /nologo " << _linkerFlags << " /Fe" << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
+                          << "link  /nologo " << _linkerFlags << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << " /SUBSYSTEM:WINDOWS /OUT " << outputFile() << "\n";
 #else
                           << "g++" << _linkerFlags << " -o " << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
 #endif
@@ -379,7 +379,7 @@ namespace cppbuild
             {
                 std::cout << "echo Linking shared library \"" << outputFile() << "\"\n"
 #ifdef _MSC_VER
-                          << "cl /nologo" << _linkerFlags << " /LD /Fe" << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
+                          << "link /DLL /nologo" << _linkerFlags << " /LD /Fe" << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
 #else
                           << "g++" << _linkerFlags << " -shared -o " << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
 #endif
