@@ -7,11 +7,20 @@
 #include <iostream>
 #include <iomanip>
 #include <regex>
+#include <filesystem>
 
 #define PATH_SEPERATOR_CHR '\\'
 #define PATH_SEPERATOR_STR "\\"
 #define PATH_ALT_SEPERATOR_CHR '/'
 #define PATH_ALT_SEPERATOR_STR "/"
+
+#ifdef _MSC_VER
+#define OBJECT_FILE_EXT ".obj"
+#else
+#define OBJECT_FILE_EXT ".o"
+#endif
+
+using namespace std::chrono_literals;
 
 namespace cppbuild
 {
@@ -188,6 +197,24 @@ namespace cppbuild
         StaticLibrary
     };
 
+    inline bool ends_with(std::string const & value, std::string const & ending)
+    {
+        if (ending.size() > value.size()) return false;
+        return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+    }
+
+    std::string ensureEndsWith(
+        const std::string& file,
+        const std::string& endsWith) 
+    {
+        if (ends_with(file, endsWith))
+        {
+            return file;
+        }
+        
+        return file + endsWith;
+    }
+
     class Target : public Folder
     {
         std::string _project;
@@ -200,13 +227,16 @@ namespace cppbuild
         std::map<std::string, Folder> _installFiles;
         std::string _compilerFlags;
         std::string _linkerFlags;
-
+        
         std::string outputFile() const
         {
             if (_targetType == TargetTypes::Executable) return pathCombine({ buildRoot(), _project + ".exe" });
             if (_targetType == TargetTypes::SharedLibrary) return pathCombine({ buildRoot(), "lib" + _project + ".dll" });
+#ifdef _MSC_VER
+            if (_targetType == TargetTypes::StaticLibrary) return pathCombine({ buildRoot(), "lib" + _project + ".lib" });
+#else
             if (_targetType == TargetTypes::StaticLibrary) return pathCombine({ buildRoot(), "lib" + _project + ".a" });
-
+#endif
             return pathCombine({ buildRoot() });
         }
 
@@ -214,8 +244,12 @@ namespace cppbuild
         {
             std::string libraries;
 
-            // Gather all library include directories into one string
+            // Gather all libraries into one string
+#ifdef _MSC_VER
+            for (auto file : _libraries) libraries += " " + ensureEndsWith(file, ".lib");
+#else
             for (auto file : _libraries) libraries += " -l" + file;
+#endif
             
             return libraries;
         }
@@ -225,7 +259,11 @@ namespace cppbuild
             std::string dirs;
 
             // Gather all library include directories into one string
+#ifdef _MSC_VER
+            for (auto dir : _libraryDirs) dirs += " /LIBPATH:" + dir;
+#else
             for (auto dir : _libraryDirs) dirs += " -L" + dir;
+#endif
             
             return dirs;
         }
@@ -235,7 +273,11 @@ namespace cppbuild
             std::string dirs;
 
             // Gather all header include directories into one string
+#ifdef _MSC_VER
+            for (auto dir : _includeDirs) dirs += " /I" + dir;
+#else
             for (auto dir : _includeDirs) dirs += " -I" + dir;
+#endif
             
             return dirs;
         }
@@ -247,7 +289,7 @@ namespace cppbuild
             // Add all object files
             for (auto file : allFiles())
             {
-                std::string objfile = pathCombine({ buildRoot(), "obj", file + ".o" });
+                std::string objfile = pathCombine({ buildRoot(), "obj", file + OBJECT_FILE_EXT });
                 objfile = std::regex_replace(objfile, std::regex("\\.\\."), "__");
 
                 objectFiles += std::string(" ") + objfile;
@@ -270,11 +312,32 @@ namespace cppbuild
 
         void outputCompileFile(const std::string& file, int percentage)
         {
-            std::string objfile = pathCombine({ buildRoot(), "obj", file + ".o" });
+            std::string objfile = pathCombine({ buildRoot(), "obj", file + OBJECT_FILE_EXT });
             objfile = std::regex_replace(objfile, std::regex("\\.\\."), "__");
-
+            
+            std::filesystem::path filepath(file);
+            std::filesystem::path objfilepath(objfile);
+            
+            auto filetime = std::filesystem::last_write_time(filepath);
+  
+//            std::cout << "echo " <<  std::asctime(std::localtime(filetime)) << " - " << std::asctime(std::localtime(objfiletime)) << std::endl;
+/*
+            if (std::filesystem::exists(objfilepath))
+            {
+                auto objfiletime = std::filesystem::last_write_time(objfilepath);
+                if (std::filesystem::last_write_time(filepath) > std::filesystem::last_write_time(objfilepath))
+                {
+                    std::cout << "echo [" << std::setfill(' ') << std::setw(3) << percentage << "%%] \"" << file << "\" is up-to-date\n";
+                    return;
+                }
+            }
+*/
             std::cout << "echo [" << std::setfill(' ') << std::setw(3) << percentage << "%%] Compiling \"" << file << "\"\n" 
+#ifdef _MSC_VER
+                      << "cl /nologo" << _compilerFlags << " " << file << " -c /Fo" << objfile << outputIncludeDirs() << "\n";
+#else
                       << "g++" << _compilerFlags << " " << file << " -c -o " << objfile << outputIncludeDirs() << "\n";
+#endif
         }
 
         void generateBuildScript()
@@ -306,17 +369,29 @@ namespace cppbuild
             if (_targetType == TargetTypes::Executable)
             {
                 std::cout << "echo [" << std::setfill(' ') << std::setw(3) << 100 << "%%] Linking executable \"" << outputFile() << "\"\n" 
+#ifdef _MSC_VER
+                          << "cl /nologo " << _linkerFlags << " /Fe" << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
+#else
                           << "g++" << _linkerFlags << " -o " << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
+#endif
             }
             else if (_targetType == TargetTypes::SharedLibrary)
             {
                 std::cout << "echo Linking shared library \"" << outputFile() << "\"\n"
+#ifdef _MSC_VER
+                          << "cl /nologo" << _linkerFlags << " /LD /Fe" << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
+#else
                           << "g++" << _linkerFlags << " -shared -o " << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
+#endif
             }
             else if (_targetType == TargetTypes::StaticLibrary)
             {
                 std::cout << "echo Linking static library \"" << outputFile() << "\"\n"
+#ifdef _MSC_VER
+                          << "cl /nolog link " << outputAllObjectFiles() << " /OUT:" << outputFile() << _linkerFlags << "\n";
+#else
                           << "ar rvs " << outputFile() << outputAllObjectFiles() << "\n";
+#endif
             }
         }
 
@@ -360,7 +435,7 @@ namespace cppbuild
         void generateCleanScript()
         {
             // Remove all the independant object files
-            for (auto file : allFiles()) outputDeleteFile(pathCombine({ buildRoot(), "obj", extractFilename(file) + ".o" }));
+            for (auto file : allFiles()) outputDeleteFile(pathCombine({ buildRoot(), "obj", extractFilename(file) + OBJECT_FILE_EXT }));
 
             // Remove the target file
             outputDeleteFile(outputFile());
@@ -372,8 +447,16 @@ namespace cppbuild
 
     public:
         Target(const std::string& name, TargetTypes targetType = TargetTypes::Executable)
-            : Folder(""), _project(name), _targetType(targetType), _installDir(""), 
-                _compilerFlags(" --std=c++11"), _linkerFlags("")
+            : Folder(""),
+                _project(name),
+                _targetType(targetType),
+                _installDir(""), 
+#ifdef _MSC_VER
+                _compilerFlags(" /std:c++14"),
+#else
+                _compilerFlags(" --std=c++14"),
+#endif
+                _linkerFlags("")
         { }
 
         virtual ~Target()

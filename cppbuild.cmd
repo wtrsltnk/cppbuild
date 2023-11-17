@@ -27,8 +27,24 @@ if not exist build mkdir build
 if not exist build\obj mkdir build\obj
 
 echo Start generating build scripts for this project...
-g++ "__build__.cpp" --std=c++11 -o "build\cppbuild.exe" -I%CPPBUILD_DIRECTORY%
 
+where /q g++.exe || goto try_vcpp
+g++ "__build__.cpp" --std=c++17 -o "build\cppbuild.exe" -I%CPPBUILD_DIRECTORY%
+
+goto continue_flow
+
+:try_vcpp
+where /q cl.exe 
+if %ERRORLEVEL% == 1 (
+    echo.
+    echo ***ERROR*** No suitable compiler is found to compile __build__.cpp
+    goto :exit
+)
+
+ECHO cl /EHsc "__build__.cpp" /I %CPPBUILD_DIRECTORY% /std:c++17 /Febuild\cppbuild.exe
+cl /EHsc "__build__.cpp" /I %CPPBUILD_DIRECTORY% /std:c++17 /Febuild\cppbuild.exe
+
+:continue_flow
 call build\cppbuild.exe build > build\build.cmd
 call build\cppbuild.exe install > build\install.cmd
 call build\cppbuild.exe run > build\run.cmd
