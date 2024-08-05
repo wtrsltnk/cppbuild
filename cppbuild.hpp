@@ -370,7 +370,7 @@ namespace cppbuild
             {
                 std::cout << "echo [" << std::setfill(' ') << std::setw(3) << 100 << "%%] Linking executable \"" << outputFile() << "\"\n" 
 #ifdef _MSC_VER
-                          << "link  /nologo " << _linkerFlags << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << " /SUBSYSTEM:WINDOWS /OUT " << outputFile() << "\n";
+                          << "link  /nologo " << _linkerFlags << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << " /SUBSYSTEM:WINDOWS /OUT:" << outputFile() << "\n";
 #else
                           << "g++" << _linkerFlags << " -o " << outputFile() << outputAllObjectFiles() << outputLibraryDirs() << outputLibraries() << "\n";
 #endif
